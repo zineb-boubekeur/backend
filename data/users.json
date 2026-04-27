@@ -1,0 +1,47 @@
+[
+  {
+    "id": "3",
+    "age": 20,
+    "email": "zineb@",
+    "firstName": "Zineb",
+    "lastName": "Boubekeur"
+  },
+  {
+    "id": "4",
+    "age": 20,
+    "email": "zineb@",
+    "firstName": "Zineb",
+    "lastName": "Boubekeur"
+  },
+  {
+    "id": "5",
+    "age": 21,
+    "email": "zineb@",
+    "firstName": "Zineb",
+    "lastName": "Boubekeur"
+  },
+  {
+    "id": "6",
+    "age": 21,
+    "email": "zineb@test.com",
+    "firstName": "Zineb",
+    "lastName": "Boubekeur",
+    "password": "Test@123"
+  },
+  {
+    "id": "7",
+    "age": 21,
+    "email": "zineb@test.com",
+    "firstName": "Zineb",
+    "lastName": "Boubekeur",
+    "password": "Test@123"
+  },
+  {
+    "id": "8",
+    "age": 21,
+    "email": "zineb@test.com",
+    "firstName": "Zineb",
+    "lastName": "Boubekeur",
+    "password": "$2b$10$ing.8m7n3QbvrLl8/7HxP.TKKYawSO26Qowo9y4wdrJQf9.T71AsK"
+  }
+]
