@@ -3,6 +3,9 @@ import userRoutes from './routes/user.routes';
 import authRoutes from './routes/auth.routes';
 import { Request, Response } from 'express';
 import { notFound, errorHandler } from './middlewares/error.middleware';
+import { sequelize } from './config/database';
+import './models/user';
+import cookieParser from 'cookie-parser';
 
 import { logger } from './util/logger';
 const app: Application = express();
@@ -10,7 +13,7 @@ const app: Application = express();
 console.log('auth file imported');
 
 app.use(express.json());
-
+app.use(cookieParser());
 // routes
 app.use('/api', userRoutes);
 app.use('/api', authRoutes);
@@ -21,6 +24,16 @@ app.get('/', (req: Request, res: Response) => {
 });
 
 logger.info('Server starting...');
+
+sequelize
+  .authenticate()
+  .then(() => console.log('DB connected'))
+  .catch((err) => console.error('DB error', err));
+
+sequelize
+  .sync({ alter: true })
+  .then(() => console.log('Tables created'))
+  .catch((err) => console.error(err));
 
 // routes inconnues (404)
 app.use(notFound);

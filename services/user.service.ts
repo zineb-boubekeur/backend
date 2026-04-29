@@ -1,30 +1,30 @@
-import fs from 'fs';
 import bcrypt from 'bcrypt';
+//import { sequelize } from "./config/database";
+import { User } from '../models/user';
+import { UniqueConstraintError } from 'sequelize';
+import jwt from 'jsonwebtoken';
+
+import { generateAccessToken, generateRefreshToken } from '../util/jwt';
 
 export type HttpError = Error & {
   status?: number;
 };
 
-const filePath = './data/users.json';
-
-export type User = {
-  id: string;
+export type tsUser = {
+  id: number;
   email: string;
-  password: string;
   firstName: string;
   lastName: string;
   age: number;
+  password: string;
 };
 
-export const getAllUsers = (): User[] => {
-  const data = fs.readFileSync(filePath, 'utf-8');
-  return JSON.parse(data);
+export const getAllUsers = async () => {
+  return await User.findAll();
 };
 
-export const getUserById = (id: string): User => {
-  const users: User[] = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-
-  const user = users.find((u) => u.id === id);
+export const getUserById = async (id: number) => {
+  const user = await User.findByPk(id);
 
   if (!user) {
     const error: HttpError = new Error('User not found');
@@ -32,71 +32,89 @@ export const getUserById = (id: string): User => {
     throw error;
   }
 
+  return user.toJSON() as tsUser;
+};
+
+export const updateUser = async (id: number, data: tsUser) => {
+  const user = await User.findByPk(id);
+
+  if (!user) {
+    const error = new Error('User not found') as Error & { status?: number };
+    error.status = 404;
+    throw error;
+  }
+
+  await user.update(data);
+
   return user;
 };
 
-export const updateUserById = (id: string, dataUpdate: User) => {
-  const users: User[] = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+export const addNewUser = async (userData: tsUser) => {
+  try {
+    const hashedPassword = await bcrypt.hash(userData.password, 10);
 
-  const userIndex = users.findIndex((user) => user.id === id);
+    return await User.create({
+      firstName: userData.firstName,
+      lastName: userData.lastName,
+      email: userData.email,
+      password: hashedPassword,
+      age: userData.age,
+    });
+  } catch (err) {
+    if (err instanceof UniqueConstraintError) {
+      throw new Error('Email already exists, please use another email');
+    }
 
-  if (userIndex == -1) {
+    throw err;
+  }
+};
+
+export const deleteUserById = async (id: number) => {
+  const user = await User.findByPk(id);
+  if (!user) {
     const error: HttpError = new Error('User not found');
     error.status = 404;
     throw error;
   }
-
-  //  if (dataUpdate.name) users[userIndex].name = dataUpdate.name;
-  if (dataUpdate.age) users[userIndex].age = dataUpdate.age;
-  if (dataUpdate.email) users[userIndex].email = dataUpdate.email;
-  if (dataUpdate.firstName) users[userIndex].firstName = dataUpdate.firstName;
-  if (dataUpdate.lastName) users[userIndex].lastName = dataUpdate.lastName;
-  if (dataUpdate.password) users[userIndex].password = dataUpdate.password;
-
-  fs.writeFileSync(filePath, JSON.stringify(users, null, 2));
-
-  return users[userIndex];
+  return await User.destroy({ where: { id } });
 };
 
-export const addNewUser = (userData: User) => {
-  const { firstName, lastName, email, password, age } = userData;
-  const hashedPassword = bcrypt.hashSync(password, 10);
-  if (!age || !email || !lastName || !password || !firstName) {
-    const error: HttpError = new Error('All fields are required');
-    error.status = 400;
-    throw error;
+export const loginUser = async (email: string, password: string) => {
+  const user = await User.findOne({ where: { email } });
+
+  if (!user) {
+    throw new Error('Invalid credentials');
   }
-  const users = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-  const lastUser = users[users.length - 1];
-  const newId = lastUser ? Number(lastUser.id) + 1 : 1;
-  const newUser = {
-    id: newId.toString(),
-    age: userData.age,
-    email: userData.email,
-    firstName: userData.firstName,
-    lastName: userData.lastName,
-    password: hashedPassword,
-  };
 
-  users.push(newUser);
+  const valid = await bcrypt.compare(password, user.toJSON().password);
 
-  fs.writeFileSync(filePath, JSON.stringify(users, null, 2));
+  if (!valid) {
+    throw new Error('Invalid credentials');
+  }
 
-  return newUser;
+  const accessToken = generateAccessToken(user.toJSON());
+  const refreshToken = generateRefreshToken(user.toJSON());
+
+  return { accessToken, refreshToken };
 };
 
-export const deleteUserById = (id: string) => {
-  const users: User[] = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+const REFRESH_SECRET = 'refresh_secret';
 
-  const userIndex = users.findIndex((user) => user.id === id);
-
-  if (userIndex === -1) {
-    const error: HttpError = new Error('User not found');
-    error.status = 404;
-    throw error;
+export const refreshAccessToken = (refreshToken: string): string => {
+  if (!refreshToken) {
+    throw new Error('No refresh token');
   }
 
-  users.splice(userIndex, 1);
+  try {
+    // on vérifie et on extrait l'id
+    const decoded = jwt.verify(refreshToken, REFRESH_SECRET) as jwt.JwtPayload;
 
-  fs.writeFileSync(filePath, JSON.stringify(users, null, 2));
+    // on reconstruit un objet minimal compatible avec tsUser
+    const accessToken = generateAccessToken(decoded.id);
+    console.log(decoded);
+
+    return accessToken;
+  } catch {
+    throw new Error('Invalid refresh token');
+  }
 };
