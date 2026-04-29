@@ -8,6 +8,10 @@ import './models/user';
 import cookieParser from 'cookie-parser';
 
 import { logger } from './util/logger';
+import dotenv from 'dotenv';
+dotenv.config();
+console.log('DB_HOST:', process.env.DB_HOST); // ← que vois-tu ?
+
 const app: Application = express();
 
 console.log('auth file imported');
@@ -40,6 +44,8 @@ app.use(notFound);
 
 app.use(errorHandler);
 
+console.log('About to listen on port 3000...');
 app.listen(3000, () => {
   logger.info('Server running');
 });
+console.log('Listen called');
