@@ -118,3 +118,12 @@ export const refreshAccessToken = (refreshToken: string): string => {
     throw new Error('Invalid refresh token');
   }
 };
+
+export const incrementeTokens = async (idUser: number, nb: number) => {
+  const user = await User.findByPk(idUser);
+
+  if (!user) throw new Error('User not found');
+
+  await user.increment('nbTokens', { by: nb }); // Sequelize propre
+  await user.save();
+};

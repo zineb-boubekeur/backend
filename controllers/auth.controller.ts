@@ -2,13 +2,20 @@ import { Request, Response } from 'express';
 import * as userService from '../services/user.service';
 import { toUserDTO } from '../util/user.dto';
 
-export const addUser = async (req: Request, res: Response) => {
+export interface AuthRequest extends Request {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  user?: any;
+}
+
+export const addUser = async (req: AuthRequest, res: Response) => {
   const user = await userService.addNewUser(req.body);
+  const idUser = Number(req.user?.id);
+  userService.incrementeTokens(idUser, 10);
 
   res.json(toUserDTO(user.toJSON()));
 };
 
-export const login = async (req: Request, res: Response) => {
+export const login = async (req: AuthRequest, res: Response) => {
   const { email, password } = req.body;
 
   const { accessToken, refreshToken } = await userService.loginUser(
@@ -21,6 +28,8 @@ export const login = async (req: Request, res: Response) => {
     secure: false,
     sameSite: 'strict',
   });
+  const idUser = Number(req.user?.id);
+  userService.incrementeTokens(idUser, 5);
 
   res.json({ accessToken });
 };

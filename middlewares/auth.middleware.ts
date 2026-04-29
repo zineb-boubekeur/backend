@@ -28,7 +28,7 @@ export const authMiddleware = (
       return res.status(401).json({ message: 'Invalid token format' });
     }
 
-    const decoded = jwt.verify(token, ACCESS_SECRET);
+    const decoded = jwt.verify(token, ACCESS_SECRET) as jwt.JwtPayload;
 
     req.user = decoded;
 
@@ -46,12 +46,16 @@ export const authorizeUser = (
 ) => {
   const userIdFromToken = req.user?.id;
   const userIdFromParams = req.params.id;
+  console.log('personne connecté :');
+  console.log(userIdFromToken);
+  console.log('personne a qui on modifie:');
+  console.log(userIdFromParams);
 
   if (!userIdFromToken) {
     return res.status(401).json({ message: 'Not authenticated' });
   }
 
-  if (userIdFromToken !== userIdFromParams) {
+  if (String(userIdFromToken) !== String(userIdFromParams)) {
     return res.status(403).json({ message: 'Forbidden' });
   }
 

@@ -4,12 +4,10 @@ import tseslint from 'typescript-eslint';
 import { defineConfig } from 'eslint/config';
 
 export default defineConfig([
-  // 🔥 IGNORE (IMPORTANT)
   {
     ignores: ['dist/**', 'node_modules/**'],
   },
 
-  // config JS
   {
     files: ['**/*.{js,mjs,cjs}'],
     ...js.configs.recommended,
@@ -18,6 +16,15 @@ export default defineConfig([
     },
   },
 
-  // config TS
   ...tseslint.configs.recommended,
+
+  {
+    files: ['**/*.ts'],
+    languageOptions: {
+      parserOptions: {
+        tsconfigRootDir: import.meta.dirname,
+        project: './tsconfig.json',
+      },
+    },
+  },
 ]);

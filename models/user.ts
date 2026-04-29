@@ -28,4 +28,8 @@ export const User = sequelize.define('User', {
     type: DataTypes.INTEGER,
     allowNull: false,
   },
+  nbTokens: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
 });
