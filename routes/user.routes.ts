@@ -5,6 +5,13 @@ import { updateUserSchema } from '../schemas/auth.schema';
 
 import * as userController from '../controllers/user.controller';
 import { authMiddleware, authorizeUser } from '../middlewares/auth.middleware';
+import { Request, Response, NextFunction } from 'express';
+
+export const asyncHandler =
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (fn: any) => (req: Request, res: Response, next: NextFunction) => {
+    Promise.resolve(fn(req, res, next)).catch(next);
+  };
 
 router.get('/users', authMiddleware, userController.getUsers);
 router.get('/users/:id', authMiddleware, userController.getUser);
@@ -15,6 +22,7 @@ router.put(
   validate(updateUserSchema),
   userController.updateUser,
 );
+
 router.delete(
   '/users/:id',
   authMiddleware,

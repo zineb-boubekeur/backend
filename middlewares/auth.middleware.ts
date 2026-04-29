@@ -28,9 +28,11 @@ export const authMiddleware = (
       return res.status(401).json({ message: 'Invalid token format' });
     }
 
-    const decoded = jwt.verify(token, ACCESS_SECRET) as jwt.JwtPayload;
+    const decoded = jwt.verify(token, ACCESS_SECRET) as { id: number };
 
     req.user = decoded;
+
+    console.log(decoded);
 
     next();
     // eslint-disable-next-line @typescript-eslint/no-unused-vars

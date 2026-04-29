@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import { User } from '../models/user';
 import { UniqueConstraintError } from 'sequelize';
 import jwt from 'jsonwebtoken';
+import { AppError } from '../middlewares/error.middleware';
 
 import { generateAccessToken, generateRefreshToken } from '../util/jwt';
 
@@ -17,6 +18,7 @@ export type tsUser = {
   lastName: string;
   age: number;
   password: string;
+  nbTokens: number;
 };
 
 export const getAllUsers = async () => {
@@ -59,6 +61,7 @@ export const addNewUser = async (userData: tsUser) => {
       email: userData.email,
       password: hashedPassword,
       age: userData.age,
+      nbTokens: 20,
     });
   } catch (err) {
     if (err instanceof UniqueConstraintError) {
@@ -95,7 +98,7 @@ export const loginUser = async (email: string, password: string) => {
   const accessToken = generateAccessToken(user.toJSON());
   const refreshToken = generateRefreshToken(user.toJSON());
 
-  return { accessToken, refreshToken };
+  return { accessToken, refreshToken, user };
 };
 
 const REFRESH_SECRET = 'refresh_secret';
@@ -119,11 +122,43 @@ export const refreshAccessToken = (refreshToken: string): string => {
   }
 };
 
-export const incrementeTokens = async (idUser: number, nb: number) => {
-  const user = await User.findByPk(idUser);
+export const decrementeTokens = async (idUser: number, nb: number) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const user = (await User.findByPk(idUser)) as any;
 
-  if (!user) throw new Error('User not found');
+  if (!user) {
+    throw new AppError(404, 'User not found');
+  }
 
-  await user.increment('nbTokens', { by: nb }); // Sequelize propre
-  await user.save();
+  if (user.nbTokens < nb) {
+    throw new AppError(400, 'No tokens left');
+  }
+
+  await user.decrement('nbTokens', { by: nb });
+
+  return user;
 };
+const MAX_TOKENS = 20;
+
+export async function refillTokens(userId: number) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const user = (await User.findByPk(userId)) as any;
+  if (!user) throw new AppError(404, 'User not found');
+
+  const now = new Date();
+  const last = new Date(user.lastTokenUpdate);
+  const diffMs = now.getTime() - last.getTime();
+  const minutes = Math.floor(diffMs / 60000);
+
+  if (minutes <= 0) return user;
+
+  const gained = Math.min(MAX_TOKENS - user.nbTokens, minutes * 5);
+  const newTokens = Math.min(MAX_TOKENS, user.nbTokens + gained);
+
+  await User.update(
+    { nbTokens: newTokens, lastTokenUpdate: now },
+    { where: { id: userId } },
+  );
+
+  return { ...user.toJSON(), nbTokens: newTokens, lastTokenUpdate: now };
+}

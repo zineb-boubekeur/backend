@@ -31,5 +31,11 @@ export const User = sequelize.define('User', {
   nbTokens: {
     type: DataTypes.INTEGER,
     allowNull: true,
+    defaultValue: 20,
+  },
+  lastTokenUpdate: {
+    type: DataTypes.DATE,
+    allowNull: false,
+    defaultValue: DataTypes.NOW,
   },
 });
