@@ -9,6 +9,7 @@
     "sourceMap": true,
     "declaration": true,
     "rootDir": "./",
-    "outDir": "./dist"
+    "outDir": "./dist",
+    "types": ["jest"]
   }
 }

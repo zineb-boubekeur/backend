@@ -1,15 +1,13 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import bcrypt from 'bcrypt';
 //import { sequelize } from "./config/database";
 import { User } from '../models/user';
 import { UniqueConstraintError } from 'sequelize';
 import jwt from 'jsonwebtoken';
 import { AppError } from '../middlewares/error.middleware';
-
 import { generateAccessToken, generateRefreshToken } from '../util/jwt';
 
-export type HttpError = Error & {
-  status?: number;
-};
+export type HttpError = Error & { status?: number };
 
 export type tsUser = {
   id: number;
@@ -27,35 +25,29 @@ export const getAllUsers = async () => {
 
 export const getUserById = async (id: number) => {
   const user = await User.findByPk(id);
-
   if (!user) {
     const error: HttpError = new Error('User not found');
     error.status = 404;
     throw error;
   }
-
   return user.toJSON() as tsUser;
 };
 
 export const updateUser = async (id: number, data: tsUser) => {
   const user = await User.findByPk(id);
-
   if (!user) {
     const error = new Error('User not found') as Error & { status?: number };
     error.status = 404;
     throw error;
   }
-
   await user.update(data);
-
   return user;
 };
 
 export const addNewUser = async (userData: tsUser) => {
   try {
     const hashedPassword = await bcrypt.hash(userData.password, 10);
-
-    return await User.create({
+    const user = await User.create({
       firstName: userData.firstName,
       lastName: userData.lastName,
       email: userData.email,
@@ -63,11 +55,13 @@ export const addNewUser = async (userData: tsUser) => {
       age: userData.age,
       nbTokens: 20,
     });
+    const accessToken = generateAccessToken(user.toJSON());
+    const refreshToken = generateRefreshToken(user.toJSON());
+    return { accessToken, refreshToken, user };
   } catch (err) {
     if (err instanceof UniqueConstraintError) {
       throw new Error('Email already exists, please use another email');
     }
-
     throw err;
   }
 };
@@ -75,8 +69,7 @@ export const addNewUser = async (userData: tsUser) => {
 export const deleteUserById = async (id: number) => {
   const user = await User.findByPk(id);
   if (!user) {
-    const error: HttpError = new Error('User not found');
-    error.status = 404;
+    const error = new AppError(404, 'user not found');
     throw error;
   }
   return await User.destroy({ where: { id } });
@@ -84,20 +77,17 @@ export const deleteUserById = async (id: number) => {
 
 export const loginUser = async (email: string, password: string) => {
   const user = await User.findOne({ where: { email } });
-
   if (!user) {
-    throw new Error('Invalid credentials');
+    const error = new AppError(401, 'Invalid credentials');
+    throw error;
   }
-
   const valid = await bcrypt.compare(password, user.toJSON().password);
-
   if (!valid) {
-    throw new Error('Invalid credentials');
+    const error = new AppError(401, 'Invalid credentials');
+    throw error;
   }
-
   const accessToken = generateAccessToken(user.toJSON());
   const refreshToken = generateRefreshToken(user.toJSON());
-
   return { accessToken, refreshToken, user };
 };
 
@@ -107,15 +97,10 @@ export const refreshAccessToken = (refreshToken: string): string => {
   if (!refreshToken) {
     throw new Error('No refresh token');
   }
-
   try {
-    // on vérifie et on extrait l'id
     const decoded = jwt.verify(refreshToken, REFRESH_SECRET) as jwt.JwtPayload;
-
-    // on reconstruit un objet minimal compatible avec tsUser
     const accessToken = generateAccessToken(decoded.id);
     console.log(decoded);
-
     return accessToken;
   } catch {
     throw new Error('Invalid refresh token');
@@ -123,25 +108,20 @@ export const refreshAccessToken = (refreshToken: string): string => {
 };
 
 export const decrementeTokens = async (idUser: number, nb: number) => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const user = (await User.findByPk(idUser)) as any;
-
   if (!user) {
     throw new AppError(404, 'User not found');
   }
-
   if (user.nbTokens < nb) {
     throw new AppError(400, 'No tokens left');
   }
-
   await user.decrement('nbTokens', { by: nb });
-
   return user;
 };
+
 const MAX_TOKENS = 20;
 
 export async function refillTokens(userId: number) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const user = (await User.findByPk(userId)) as any;
   if (!user) throw new AppError(404, 'User not found');
 

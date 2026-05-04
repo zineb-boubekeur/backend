@@ -9,13 +9,18 @@ export interface AuthRequest extends Request {
 }
 
 export const addUser = async (req: AuthRequest, res: Response) => {
-  const user = await userService.addNewUser(req.body);
-  await refillTokens(user.toJSON().id);
-  const id = Number(user.toJSON().id);
+  const { accessToken, user } = await userService.addNewUser(req.body);
 
+  const userData = user.toJSON();
+  const id = Number(userData.id);
+
+  await refillTokens(id);
   await userService.decrementeTokens(id, 10);
 
-  res.json(toUserDTO(user.toJSON()));
+  res.json({
+    user: toUserDTO(userData),
+    accessToken,
+  });
 };
 
 export const login = async (req: AuthRequest, res: Response) => {
@@ -35,7 +40,10 @@ export const login = async (req: AuthRequest, res: Response) => {
 
   await userService.decrementeTokens(idUser, 5);
 
-  res.json({ accessToken });
+  res.json({
+    user: toUserDTO(user.toJSON()),
+    accessToken,
+  });
 };
 
 export const refresh = (req: Request, res: Response) => {

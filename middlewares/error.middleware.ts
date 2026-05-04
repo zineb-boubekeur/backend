@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import { ZodError } from 'zod';
 
 // 404 — routes inconnues
@@ -26,6 +26,8 @@ export const errorHandler = (
   err: unknown,
   req: Request,
   res: Response,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  next: NextFunction,
 ): void => {
   // 400 — erreur de validation Zod
   if (err instanceof ZodError) {
